@@ -1,0 +1,31 @@
+# Copiado para /etc/caddy/Caddyfile pelo deploy/preparar-vps.sh
+# __SITE__ vira o domínio (ex.: pedreirodedados.com.br) ou ":80" enquanto não houver domínio.
+__SITE__ {
+	encode gzip
+
+	redir /sc2-monitor /sc2-monitor/
+
+	# API do botão "Atualizar dados"
+	handle_path /sc2-monitor/api/* {
+		reverse_proxy 127.0.0.1:8100
+	}
+
+	# Dados gerados pelo coletor (fora do repositório)
+	handle_path /sc2-monitor/data/* {
+		header Cache-Control "no-cache"
+		root * /var/lib/sc2-monitor/data
+		file_server
+	}
+
+	# Página do monitor
+	handle_path /sc2-monitor/* {
+		root * /opt/sc2-cw-monitor/docs
+		file_server
+	}
+
+	# Futuro blog: troque este bloco quando o blog existir
+	handle {
+		root * /var/www/blog
+		file_server
+	}
+}

@@ -1,0 +1,20 @@
+[Unit]
+Description=SC2 CW Monitor - API do botao Atualizar dados
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=sc2
+Group=sc2
+WorkingDirectory=/opt/sc2-cw-monitor
+EnvironmentFile=/etc/sc2-monitor.env
+ExecStart=/opt/sc2-cw-monitor/.venv/bin/uvicorn servidor.api:app --host 127.0.0.1 --port 8100
+Restart=on-failure
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/sc2-monitor /tmp
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

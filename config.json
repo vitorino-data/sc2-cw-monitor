@@ -143,6 +143,5 @@
   ],
   "matchups_a_cada_horas": 168,
   "matchups_dias": 90,
-  "min_jogos_30d": 20,
-  "atualizador_url": null
+  "min_jogos_30d": 20
 }
