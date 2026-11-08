@@ -243,7 +243,7 @@ function init(data) {
     (data.matchups_em ? `<span>Matchups: últimos ${data.matchups_dias} dias, calculados ${ago(data.matchups_em)}</span>` : "");
   if (data.nao_encontrados?.length) $("stamp").innerHTML += `<span class="over">Clã não encontrado: ${esc(data.nao_encontrados.join(", "))}</span>`;
 
-  if (data.atualizador_url) setupUpdater(data.atualizador_url.replace(/\/$/, ""), data.atualizado_em);
+  fetch("api/status").then((r) => r.ok && r.json()).then((st) => { if (st) setupUpdater("api", data.atualizado_em, st); }).catch(() => {});
   $("minjogos").value = data.min_jogos_30d ?? 0;
   const sel = $("divisao");
   sel.innerHTML = data.divisoes.map((v, i) => `<option value="${i}">${esc(v.nome)}</option>`).join("");
@@ -392,8 +392,8 @@ $("share").addEventListener("click", async () => {
 });
 
 
-// ---------- botão "Atualizar dados" (via Cloudflare Worker) ----------
-function setupUpdater(api, dataStamp) {
+// ---------- botão "Atualizar dados" (API na própria VPS) ----------
+function setupUpdater(api, dataStamp, firstStatus) {
   const btn = $("refresh"), form = $("upd"), msg = $("updmsg"), go = $("updgo");
   btn.hidden = false;
   const saved = store.get("codigo");
@@ -406,31 +406,30 @@ function setupUpdater(api, dataStamp) {
   const say = (t, err) => { msg.textContent = t; msg.classList.toggle("err", !!err); };
   let timer = null;
 
-  async function waitForData(startedAt) {
+  async function poll() {
     clearTimeout(timer);
-    const elapsed = Math.round((Date.now() - startedAt) / 60000);
-    if (elapsed > 30) { go.disabled = false; return say("A atualização está demorando mais que o normal. Recarregue a página daqui a pouco.", true); }
     try {
-      const st = await fetch(api + "/status").then((r) => r.json());
-      const run = st.ultima;
-      if (run && run.status === "completed" && run.conclusion !== "success") {
+      const st = await fetch(api + "/status", { cache: "no-store" }).then((r) => r.json());
+      if (st.rodando) {
+        const min = Math.max(0, Math.round((Date.now() - new Date(st.iniciado_em)) / 60000));
+        say(`Coletando dados do SC2 Pulse… (${min} min). Leva uns 5 minutos, ou 10 com matchups. Pode deixar a página aberta.`);
+        go.disabled = true;
+      } else if (st.ok === false) {
         go.disabled = false;
-        return say("A atualização falhou no GitHub. Tente de novo em alguns minutos.", true);
-      }
-      if (run && run.status === "completed") {
+        return say(st.erro || "A atualização falhou. Tente de novo em alguns minutos.", true);
+      } else {
         const fresh = await fetch("data/latest.json?t=" + Date.now(), { cache: "no-store" }).then((r) => r.json());
         if (fresh.atualizado_em !== dataStamp) {
           say("Dados atualizados. Recarregando…");
           setTimeout(() => location.reload(), 1200);
-          return;
-        }
-        say(`Coleta concluída, publicando a página… (${elapsed} min)`);
-      } else {
-        say(`Coletando dados do SC2 Pulse… (${elapsed} min). Leva uns 5 minutos, ou 10 com matchups. Pode deixar a página aberta.`);
+        } else { go.disabled = false; say(""); }
+        return;
       }
-    } catch { say(`Aguardando resposta… (${elapsed} min)`); }
-    timer = setTimeout(() => waitForData(startedAt), 15000);
+    } catch { say("Aguardando resposta do servidor…"); }
+    timer = setTimeout(poll, 10000);
   }
+
+  if (firstStatus?.rodando) { form.hidden = false; btn.setAttribute("aria-expanded", "true"); poll(); }
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -443,13 +442,13 @@ function setupUpdater(api, dataStamp) {
         body: JSON.stringify({ codigo, matchups: $("updmu").checked }),
       });
       const body = await r.json().catch(() => ({}));
-      if (!r.ok) { go.disabled = false; return say(body.erro || `Erro ${r.status}.`, true); }
+      if (!r.ok) { go.disabled = false; return say(body.detail || `Erro ${r.status}.`, true); }
       store.set("codigo", codigo);
-      if (body.ja_rodando) say("Já tem uma atualização em andamento. Vou avisar quando terminar.");
-      waitForData(body.ja_rodando && body.ultima ? new Date(body.ultima.criado_em).getTime() : Date.now());
+      if (body.ja_rodando) say("Já tem uma atualização em andamento. A página recarrega quando terminar.");
+      poll();
     } catch {
       go.disabled = false;
-      say("Não consegui falar com o serviço de atualização. Verifique sua conexão.", true);
+      say("Não consegui falar com o servidor. Verifique sua conexão.", true);
     }
   });
 }

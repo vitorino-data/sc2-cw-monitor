@@ -1,0 +1,55 @@
+name: CI e deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Compilar
+        run: python -m py_compile coletor/*.py servidor/*.py
+      - name: Testes
+        run: python -m unittest discover -s tests -v
+      - name: Validar script da VPS
+        run: bash -n deploy/preparar-vps.sh
+
+  deploy:
+    needs: ci
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: producao
+    steps:
+      - name: Atualizar a VPS por SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          if [ -z "$VPS_HOST" ] || [ -z "$VPS_SSH_KEY" ]; then
+            echo "::warning::Secrets VPS_HOST/VPS_SSH_KEY ainda não configurados; deploy pulado."
+            exit 0
+          fi
+          install -m 700 -d ~/.ssh
+          echo "$VPS_SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh -i ~/.ssh/deploy_key deploy@"$VPS_HOST" '
+            set -e
+            cd /opt/sc2-cw-monitor
+            git fetch --quiet origin main
+            git reset --hard origin/main
+            .venv/bin/pip install -q -r requirements.txt
+            sudo /usr/bin/systemctl restart sc2-monitor-api
+            echo "Deploy concluído: $(git log -1 --format="%h %s")"
+          '

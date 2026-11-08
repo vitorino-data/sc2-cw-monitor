@@ -20,8 +20,8 @@ from sc2pulse import SC2Pulse, build_clan_report  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = ROOT / "config.json"
-LATEST = ROOT / "docs" / "data" / "latest.json"
-HIST_DIR = ROOT / "dados" / "historico"
+LATEST = Path(os.environ.get("SC2_DATA_DIR", ROOT / "docs" / "data")) / "latest.json"
+HIST_DIR = Path(os.environ.get("SC2_HIST_DIR", ROOT / "dados" / "historico"))
 SNAP_FIELDS = ["coletado_em", "time", "clan", "character_id", "jogador", "mmr_atual", "mmr_max_90d",
                "jogos_carreira", "jogos_temporada", "jogos_90d", "jogos_30d"]
 
@@ -75,13 +75,14 @@ def main():
         "meu_time": cfg.get("meu_time"),
         "divisoes": cfg.get("divisoes", []),
         "min_jogos_30d": cfg.get("min_jogos_30d", 0),
-        "atualizador_url": cfg.get("atualizador_url"),
         "times": teams,
         "nao_encontrados": missing,
         "jogadores": players,
     }
     LATEST.parent.mkdir(parents=True, exist_ok=True)
-    LATEST.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    tmp = LATEST.with_suffix(".tmp")  # grava em arquivo temporário e troca, para a página nunca ler pela metade
+    tmp.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    tmp.replace(LATEST)
 
     # Foto horária: grava só quem mudou.
     HIST_DIR.mkdir(parents=True, exist_ok=True)
