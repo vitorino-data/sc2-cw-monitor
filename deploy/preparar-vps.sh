@@ -7,6 +7,7 @@
 #   1) domínio (opcional; sem domínio o site fica em http://IP-DA-VPS/sc2-monitor/)
 #   2) chave pública SSH que o GitHub Actions vai usar para o deploy (opcional, dá para adicionar depois)
 set -euo pipefail
+trap 'echo; echo "ERRO: o script parou na linha $LINENO. Copie as últimas linhas e mande para o Claude."' ERR
 
 DOMINIO="${1:-}"
 CHAVE_DEPLOY="${2:-}"
@@ -43,7 +44,7 @@ install -d /var/www/blog
 
 echo "==> Configuração do serviço"
 if [ ! -f /etc/sc2-monitor.env ]; then
-  CODIGO="$(tr -dc 'a-z0-9' </dev/urandom | head -c 10)"
+  CODIGO="$(python3 -c 'import secrets; print(secrets.token_hex(5))')"
   cat > /etc/sc2-monitor.env <<ENV
 CODIGO_ATUALIZACAO=$CODIGO
 SC2_DATA_DIR=/var/lib/sc2-monitor/data
