@@ -106,6 +106,10 @@ e abra http://localhost:8000. O botão "Atualizar dados" só aparece no servidor
 
 Testes: `python -m unittest discover -s tests -v`
 
+## Como contribuir
+
+Nada vai direto no `main`: crie um branch, abra um pull request e faça o merge só com o CI verde. O `main` é publicado na VPS automaticamente.
+
 ## Limitações
 
 - O winrate por matchup usa só as partidas que o SC2 Pulse registrou, que é parcial. Use como tendência.
