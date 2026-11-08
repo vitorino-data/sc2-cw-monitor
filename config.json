@@ -1,0 +1,148 @@
+{
+  "titulo": "Monitor de Clan Wars",
+  "meu_time": "Eximius",
+  "times": [
+    {
+      "nome": "OsR",
+      "descricao": "Old School Reborn",
+      "clas": [
+        {
+          "id": 55441,
+          "tag": "ØsR"
+        }
+      ]
+    },
+    {
+      "nome": "Eximius",
+      "descricao": "eXimius Gaming + Academy",
+      "clas": [
+        {
+          "id": 4450,
+          "tag": "eX"
+        },
+        {
+          "id": 126765,
+          "tag": "eXAc"
+        }
+      ]
+    },
+    {
+      "nome": "iMkS",
+      "descricao": "Insane Master Killers (todos os clãs iMkS)",
+      "clas": [
+        {
+          "id": 209,
+          "tag": "iMkS"
+        },
+        {
+          "id": 129005,
+          "tag": "iMkSB"
+        },
+        {
+          "id": 129184,
+          "tag": "iMkSC"
+        },
+        {
+          "id": 129911,
+          "tag": "iMkSD"
+        },
+        {
+          "id": 132438,
+          "tag": "iMKSE"
+        },
+        {
+          "id": 121029,
+          "tag": "ImKsAc"
+        }
+      ]
+    },
+    {
+      "nome": "HellHost",
+      "descricao": "Aliança HeIIFire + HOST",
+      "clas": [
+        {
+          "id": 83796,
+          "tag": "HeIIF"
+        },
+        {
+          "id": 3147,
+          "tag": "HØST"
+        }
+      ]
+    },
+    {
+      "nome": "UpeV",
+      "descricao": "Unidos por el Vicio",
+      "clas": [
+        {
+          "id": 126,
+          "tag": "UpeV"
+        }
+      ]
+    }
+  ],
+  "divisoes": [
+    {
+      "nome": "Divisão 1",
+      "vagas": [
+        {
+          "nome": "Jogador 1",
+          "liga": "Diamond 1",
+          "mmr_max": 4200,
+          "obs": ""
+        },
+        {
+          "nome": "Jogador 2",
+          "liga": "Master 3",
+          "mmr_max": 4500,
+          "obs": ""
+        },
+        {
+          "nome": "Jogador 3",
+          "liga": "Master 2",
+          "mmr_max": 4800,
+          "obs": ""
+        },
+        {
+          "nome": "Jogador 4",
+          "liga": "Master 1",
+          "mmr_max": 5100,
+          "obs": ""
+        }
+      ]
+    },
+    {
+      "nome": "Divisão 2",
+      "vagas": [
+        {
+          "nome": "Jogador 1",
+          "liga": "Diamond 3",
+          "mmr_max": 3500,
+          "obs": "Sem off-race"
+        },
+        {
+          "nome": "Jogador 2",
+          "liga": "Diamond 2",
+          "mmr_max": 3800,
+          "obs": "Sem off-race"
+        },
+        {
+          "nome": "Jogador 3",
+          "liga": "Diamond 1",
+          "mmr_max": 4100,
+          "obs": ""
+        },
+        {
+          "nome": "Jogador 4",
+          "liga": "Master 3",
+          "mmr_max": 4400,
+          "obs": ""
+        }
+      ]
+    }
+  ],
+  "matchups_a_cada_horas": 168,
+  "matchups_dias": 90,
+  "min_jogos_30d": 20,
+  "atualizador_url": null
+}

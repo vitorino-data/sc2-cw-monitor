@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Monitor de Clan Wars</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: barra de comando no topo, faixa de resumo por clã, tabela densa de jogadores (scanner de escalação). */
+:root {
+  --bg: #f3f5f8;
+  --surface: #ffffff;
+  --line: #d9dee7;
+  --fg: #18202c;
+  --muted: #5d6879;
+  --accent: #2b62c9;
+  --accent-soft: #e3ebfa;
+  --ok: #1d7f4e; --ok-soft: #dff3e8;
+  --bad: #b3342b; --bad-soft: #fae3e1;
+  --warn: #9a6a00;
+  --terran: #b5462f; --protoss: #b0860a; --zerg: #7a3fa8; --random: #5d6879;
+  --mine: #fff7dc;
+  --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f141c; --surface: #161d28; --line: #273142; --fg: #e4e9f1; --muted: #93a0b4;
+  --accent: #6f9bff; --accent-soft: #1d2b47;
+  --ok: #4fc58a; --ok-soft: #133024; --bad: #f07a6f; --bad-soft: #3a1c1a; --warn: #e2b44a;
+  --terran: #ec7b62; --protoss: #e3be4f; --zerg: #b98ae0; --random: #93a0b4;
+  --mine: #2a2614; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0f141c; --surface: #161d28; --line: #273142; --fg: #e4e9f1; --muted: #93a0b4;
+  --accent: #6f9bff; --accent-soft: #1d2b47;
+  --ok: #4fc58a; --ok-soft: #133024; --bad: #f07a6f; --bad-soft: #3a1c1a; --warn: #e2b44a;
+  --terran: #ec7b62; --protoss: #e3be4f; --zerg: #b98ae0; --random: #93a0b4;
+  --mine: #2a2614; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 14px/1.45 var(--f-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 40px;
+}
+.wrap { max-width: 1320px; margin: 0 auto; display: grid; gap: 18px; }
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 8px 24px; }
+h1 { font: 700 clamp(1.5rem, 3.4vw, 2.1rem)/1.1 var(--f-display); margin: 0; letter-spacing: .01em; text-wrap: balance; }
+h1 small { display: block; font: 500 .75rem/1.4 var(--f-body); color: var(--muted); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 4px; }
+.stamp { color: var(--muted); font-size: .85rem; display: grid; gap: 2px; text-align: right; }
+.stamp b { color: var(--fg); font-weight: 600; }
+
+.controls {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 14px; display: grid; gap: 12px;
+}
+.row { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: end; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field > span { font-size: .72rem; font-weight: 600; color: var(--muted); letter-spacing: .07em; text-transform: uppercase; }
+select, input[type="number"], input[type="search"] {
+  font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 6px; padding: 7px 9px; min-height: 36px;
+}
+input[type="number"] { width: 110px; font-family: var(--f-mono); }
+input[type="search"] { width: 220px; max-width: 100%; }
+select:focus-visible, input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.check { display: flex; align-items: center; gap: 6px; min-height: 36px; cursor: pointer; }
+.check input { width: 16px; height: 16px; accent-color: var(--accent); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font: 500 .85rem var(--f-mono); border: 1px solid var(--line); background: var(--bg); color: var(--muted);
+  border-radius: 999px; padding: 5px 12px; cursor: pointer;
+}
+.chip[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.refresh { margin-left: auto; }
+.upd { display: flex; flex-wrap: wrap; align-items: end; gap: 10px 18px; padding: 12px; border: 1px dashed var(--accent); border-radius: 8px; background: var(--accent-soft); }
+.upd input[type="password"] { font: inherit; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; min-height: 36px; width: 200px; }
+.upd .share { margin-left: 0; background: var(--accent); color: var(--surface); }
+.upd .share:disabled { opacity: .6; cursor: progress; }
+.updmsg { margin: 0; flex-basis: 100%; font-size: .85rem; color: var(--fg); }
+.updmsg:empty { display: none; }
+.updmsg.err { color: var(--bad); }
+.refresh + .share { margin-left: 0; }
+.share { margin-left: auto; font: inherit; font-weight: 600; color: var(--accent); background: none; border: 1px solid var(--accent); border-radius: 6px; padding: 7px 12px; cursor: pointer; min-height: 36px; }
+
+.clans { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.clan {
+  min-width: 0;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px;
+  display: grid; gap: 6px;
+}
+.clan.mine { background: var(--mine); }
+.clan > * { min-width: 0; }
+.clan h3 { margin: 0; font: 700 1.05rem var(--f-display); display: flex; justify-content: space-between; gap: 8px; }
+.clan h3 span { min-width: 0; font: 400 .8rem var(--f-body); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.clan dl { display: none; margin: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.clan dt { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.clan dd { margin: 0; font: 500 1.1rem var(--f-mono); font-variant-numeric: tabular-nums; }
+
+.tablebox { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
+th { font-size: .7rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--surface); position: sticky; top: 0; cursor: pointer; user-select: none; }
+th.l, td.l { text-align: left; }
+th[aria-sort="ascending"]::after { content: " ▲"; }
+th[aria-sort="descending"]::after { content: " ▼"; }
+th.group { cursor: default; text-align: center; border-bottom: none; padding-bottom: 0; }
+tbody tr:hover td { background: var(--accent-soft); }
+tr.mine td { background: var(--mine); }
+td.num { font-family: var(--f-mono); }
+td .sub { display: block; font-size: .75rem; color: var(--muted); }
+.name { font-weight: 600; }
+.name a { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--muted); }
+.pill { display: inline-block; font-size: .72rem; font-weight: 600; border-radius: 999px; padding: 2px 8px; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+.race { font: 600 .78rem var(--f-mono); }
+.race.Terran { color: var(--terran); } .race.Protoss { color: var(--protoss); } .race.Zerg { color: var(--zerg); } .race.Random { color: var(--random); }
+.over { color: var(--bad); font-weight: 600; }
+.mu { font-family: var(--f-mono); font-size: .82rem; }
+.mu.good { color: var(--ok); } .mu.poor { color: var(--bad); } .mu.none { color: var(--muted); }
+.note { margin: 0; padding: 10px 14px; border-radius: 8px; background: var(--bad-soft); color: var(--bad); font-weight: 500; }
+.rule { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; color: var(--muted); font-size: .85rem; }
+.rule b { color: var(--fg); }
+.slot { display: inline-grid; font: 600 .95rem var(--f-mono); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 3px 9px; line-height: 1.2; }
+.slot small { font: 400 .7rem var(--f-body); color: var(--muted); }
+.arrow { color: var(--muted); }
+.count { margin: 0; font-size: .8rem; color: var(--muted); }
+.count b { color: var(--fg); font-family: var(--f-mono); }
+.lineup { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.lineup li { display: grid; grid-template-columns: 3.4em minmax(0, 1fr) auto; gap: 8px; align-items: baseline; font-size: .88rem; padding: 3px 0; border-top: 1px dashed var(--line); }
+.lineup .cap { font: 600 .8rem var(--f-mono); color: var(--muted); }
+.lineup .who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.lineup .who.none { color: var(--bad); font-weight: 400; font-style: italic; }
+.lineup .val { font: 500 .85rem var(--f-mono); font-variant-numeric: tabular-nums; }
+.tag { display: inline-block; font: 500 .75rem var(--f-mono); background: var(--accent-soft); color: var(--accent); border-radius: 4px; padding: 1px 5px; margin-right: 3px; }
+td.strong { font-weight: 600; }
+.empty { padding: 28px; text-align: center; color: var(--muted); }
+footer { color: var(--muted); font-size: .8rem; }
+footer a { color: var(--accent); }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: .85rem; }
+@media (max-width: 640px) { .stamp { text-align: left; } .share { margin-left: 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><small>StarCraft II · servidor US · 1v1</small><span id="titulo">Monitor de Clan Wars</span></h1>
+    <div class="stamp" id="stamp">Carregando dados…</div>
+  </header>
+
+  <section class="controls" aria-label="Filtros">
+    <div class="row">
+      <label class="field"><span>Divisão</span><select id="divisao"></select></label>
+      <label class="field"><span>Vaga</span><select id="vaga"></select></label>
+      <label class="field"><span>Mín. jogos em 30 dias</span><input id="minjogos" type="number" min="0" step="5"></label>
+      <div class="field"><span>Times</span><div class="chips" id="chips"></div></div>
+    </div>
+    <div class="row">
+      <label class="field"><span>Buscar jogador</span><input id="busca" type="search" placeholder="nome ou BattleTag"></label>
+      <label class="check"><input id="ativos" type="checkbox" checked> Só quem jogou nos últimos 90 dias</label>
+      <label class="check"><input id="elegiveis" type="checkbox"> Só elegíveis</label>
+      <button class="share refresh" id="refresh" type="button" hidden aria-expanded="false" aria-controls="upd">Atualizar dados</button>
+      <button class="share" id="share" type="button">Copiar link desta divisão</button>
+    </div>
+    <form class="upd" id="upd" hidden>
+      <label class="field"><span>Código de atualização</span><input id="codigo" type="password" autocomplete="current-password" required></label>
+      <label class="check"><input id="updmu" type="checkbox"> Recalcular winrate por matchup (mais lento)</label>
+      <button class="share" type="submit" id="updgo">Atualizar agora</button>
+      <p class="updmsg" id="updmsg" role="status"></p>
+    </form>
+    <p class="rule" id="regra"></p>
+  </section>
+
+  <section class="clans" id="clans" aria-label="Escalação mais forte por time"></section>
+
+  <section class="tablebox" aria-label="Jogadores">
+    <table>
+      <thead>
+        <tr>
+          <th class="group" colspan="6"></th><th class="group" colspan="3">MMR</th><th class="group" colspan="4">Jogos</th><th class="group" colspan="4">Winrate vs raça</th>
+        </tr>
+        <tr id="heads"></tr>
+      </thead>
+      <tbody id="rows"><tr><td class="empty" colspan="17">Carregando…</td></tr></tbody>
+    </table>
+  </section>
+
+  <footer>Dados do <a href="https://sc2pulse.nephest.com/sc2" target="_blank" rel="noopener">SC2 Pulse</a>, coletados automaticamente. Elegibilidade conforme o regulamento: o MMR máximo dos últimos 90 dias não pode passar o limite da vaga. A regra de off-race não é verificada automaticamente. O winrate por matchup usa só as partidas que o SC2 Pulse registrou, então serve como tendência.</footer>
+</div>
+
+<script>
+const COLS = [
+  { k: "elegivel", t: "Status", l: true },
+  { k: "time", t: "Time", l: true },
+  { k: "jogador", t: "Jogador", l: true },
+  { k: "raca_principal", t: "Raça", l: true },
+  { k: "vaga_min", t: "Vagas possíveis", l: true },
+  { k: "battletag", t: "BattleTag", l: true },
+  { k: "mmr_max_90d", t: "Máx 90d" },
+  { k: "mmr_atual", t: "Atual" },
+  { k: "mmr_max_historico", t: "Máx hist." },
+  { k: "jogos_30d", t: "30d" },
+  { k: "jogos_90d", t: "90d" },
+  { k: "jogos_temporada", t: "Temp." },
+  { k: "jogos_carreira", t: "Carreira" },
+  { k: "mu_T", t: "vs T" }, { k: "mu_P", t: "vs P" }, { k: "mu_Z", t: "vs Z" }, { k: "mu_R", t: "vs R" },
+];
+const $ = (id) => document.getElementById(id);
+const fmt = (n) => (n == null ? "–" : n.toLocaleString("pt-BR"));
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem("cw:" + k)); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem("cw:" + k, JSON.stringify(v)); } catch {} },
+};
+let DATA = null, sort = store.get("sort2") || { k: "mmr_max_90d", dir: -1 }, activeTeams = null;
+
+function ago(iso) {
+  const min = Math.round((Date.now() - new Date(iso)) / 60000);
+  if (min < 1) return "agora";
+  if (min < 60) return `há ${min} min`;
+  const h = Math.round(min / 60);
+  return h < 48 ? `há ${h} h` : `há ${Math.round(h / 24)} dias`;
+}
+function rate(wl) {
+  if (!wl) return null;
+  const [w, l] = wl, t = w + l;
+  return t ? { w, l, t, p: w / t } : null;
+}
+const div = () => DATA.divisoes[+$("divisao").value] || DATA.divisoes[0];
+
+function init(data) {
+  DATA = data;
+  $("titulo").textContent = data.titulo || "Monitor de Clan Wars";
+  const d = new Date(data.atualizado_em);
+  $("stamp").innerHTML = `<span>Atualizado <b>${ago(data.atualizado_em)}</b> (${d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })})</span>` +
+    (data.matchups_em ? `<span>Matchups: últimos ${data.matchups_dias} dias, calculados ${ago(data.matchups_em)}</span>` : "");
+  if (data.nao_encontrados?.length) $("stamp").innerHTML += `<span class="over">Clã não encontrado: ${esc(data.nao_encontrados.join(", "))}</span>`;
+
+  if (data.atualizador_url) setupUpdater(data.atualizador_url.replace(/\/$/, ""), data.atualizado_em);
+  $("minjogos").value = data.min_jogos_30d ?? 0;
+  const sel = $("divisao");
+  sel.innerHTML = data.divisoes.map((v, i) => `<option value="${i}">${esc(v.nome)}</option>`).join("");
+  const fromHash = /^#divisao-(\d+)$/.exec(location.hash);
+  const saved = store.get("divisao");
+  sel.value = fromHash && data.divisoes[fromHash[1] - 1] ? String(fromHash[1] - 1) : (data.divisoes[saved] ? String(saved) : "0");
+  applyDivision();
+
+  activeTeams = new Set(data.times.map((t) => t.nome));
+  $("chips").innerHTML = data.times.map((t) =>
+    `<button type="button" class="chip" aria-pressed="true" data-tag="${esc(t.nome)}" title="${esc(t.descricao)}">${esc(t.nome)}</button>`).join("");
+  $("chips").addEventListener("click", (e) => {
+    const b = e.target.closest(".chip"); if (!b) return;
+    const on = b.getAttribute("aria-pressed") !== "true";
+    b.setAttribute("aria-pressed", on);
+    on ? activeTeams.add(b.dataset.tag) : activeTeams.delete(b.dataset.tag);
+    render();
+  });
+
+  $("heads").innerHTML = COLS.map((c) => `<th class="${c.l ? "l" : ""}" data-k="${c.k}" scope="col">${c.t}</th>`).join("");
+  $("heads").addEventListener("click", (e) => {
+    const th = e.target.closest("th"); if (!th) return;
+    const col = COLS.find((c) => c.k === th.dataset.k);
+    sort = sort.k === col.k ? { k: col.k, dir: -sort.dir } : { k: col.k, dir: col.l ? 1 : -1 };
+    store.set("sort2", sort); render();
+  });
+  render();
+}
+
+function applyDivision() {
+  const i = +$("divisao").value, dv = div();
+  store.set("divisao", i);
+  history.replaceState(null, "", `#divisao-${i + 1}`);
+  $("vaga").innerHTML = `<option value="">Todas as vagas</option>` +
+    dv.vagas.map((v, j) => `<option value="${j}">${esc(v.nome)} · até ${v.mmr_max}${v.obs ? " · " + esc(v.obs) : ""}</option>`).join("");
+  $("regra").innerHTML = `<b>${esc(dv.nome)}</b><span>· ordem dos jogos</span>` +
+    dv.vagas.map((v) => `<span class="slot">${v.mmr_max}<small>${esc(v.liga)}${v.obs ? " · " + esc(v.obs) : ""}</small></span>`).join('<span class="arrow">→</span>');
+}
+
+function enrich(p) {
+  const dv = div(), minG = +$("minjogos").value || 0;
+  const mmr = p.mmr_max_90d;
+  const fits = mmr == null ? [] : dv.vagas.filter((v) => mmr <= v.mmr_max);
+  const gamesOk = (p.jogos_30d ?? 0) >= minG;
+  const reasons = [];
+  if (mmr == null) reasons.push("sem jogos em 90d");
+  else if (!fits.length) reasons.push(`MMR acima de ${Math.max(...dv.vagas.map((v) => v.mmr_max))}`);
+  if (!gamesOk) reasons.push(`${p.jogos_30d ?? 0} de ${minG} jogos em 30d`);
+  const mu = p.matchups || {};
+  return { ...p, elegivel: reasons.length ? 0 : 1, motivo: reasons.join(" · "), vagas: fits,
+    vaga_min: fits.length ? Math.min(...fits.map((v) => v.mmr_max)) : null,
+    mu_T: rate(mu.T), mu_P: rate(mu.P), mu_Z: rate(mu.Z), mu_R: rate(mu.R) };
+}
+
+// Escalação mais forte provável: preenche da vaga mais alta para a mais baixa com o melhor elegível ainda livre.
+function bestLineup(players, dv) {
+  const pool = players.filter((p) => p.elegivel).sort((a, b) => b.mmr_max_90d - a.mmr_max_90d);
+  const used = new Set();
+  const out = {};
+  [...dv.vagas].sort((a, b) => b.mmr_max - a.mmr_max).forEach((v) => {
+    const pick = pool.find((p) => !used.has(p.character_id) && p.mmr_max_90d <= v.mmr_max);
+    if (pick) used.add(pick.character_id);
+    out[v.mmr_max] = pick || null;
+  });
+  return out;
+}
+
+function sortVal(r, k) {
+  const v = r[k];
+  if (v && typeof v === "object") return v.p;
+  return v;
+}
+
+function render() {
+  const dv = div();
+  const q = $("busca").value.trim().toLowerCase();
+  const onlyActive = $("ativos").checked, onlyOk = $("elegiveis").checked;
+  const vagaIdx = $("vaga").value;
+  const vaga = vagaIdx === "" ? null : dv.vagas[+vagaIdx];
+  const all = DATA.jogadores.map(enrich);
+
+  $("clans").innerHTML = DATA.times.map((t) => {
+    const ps = all.filter((p) => p.time === t.nome);
+    const ok = ps.filter((p) => p.elegivel).length;
+    const lu = bestLineup(ps, dv);
+    return `<article class="clan${t.nome === DATA.meu_time ? " mine" : ""}">
+      <h3>${esc(t.nome)}<span title="${esc(t.clas.map((x) => x.tag).join(" + "))}">${t.clas.length > 2 ? t.clas.length + " clãs" : esc(t.clas.map((x) => x.tag).join(" + "))}</span></h3>
+      <p class="count"><b>${ok}</b> elegíveis nesta divisão</p>
+      <ol class="lineup">${dv.vagas.map((v) => {
+        const p = lu[v.mmr_max];
+        return `<li><span class="cap">${v.mmr_max}</span>${p
+          ? `<span class="who"><span class="race ${p.raca_principal}">${(p.raca_principal || "?")[0]}</span> ${esc(p.jogador.replace(/#\d+$/, ""))}</span><span class="val">${fmt(p.mmr_max_90d)}</span>`
+          : `<span class="who none">sem jogador</span><span class="val"></span>`}</li>`;
+      }).join("")}</ol></article>`;
+  }).join("");
+
+  let rows = all.filter((p) => activeTeams.has(p.time))
+    .filter((p) => !onlyActive || p.jogos_90d > 0)
+    .filter((p) => !onlyOk || p.elegivel)
+    .filter((p) => !vaga || (p.elegivel && p.mmr_max_90d <= vaga.mmr_max))
+    .filter((p) => !q || p.jogador.toLowerCase().includes(q) || (p.battletag || "").toLowerCase().includes(q));
+  rows.sort((a, b) => {
+    const x = sortVal(a, sort.k), y = sortVal(b, sort.k);
+    if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1;
+    return (typeof x === "string" ? x.localeCompare(y) : x - y) * sort.dir;
+  });
+  document.querySelectorAll("#heads th").forEach((th) =>
+    th.setAttribute("aria-sort", th.dataset.k === sort.k ? (sort.dir > 0 ? "ascending" : "descending") : "none"));
+
+  const muCell = (m) => !m ? `<td class="mu none">–</td>` :
+    `<td class="mu ${m.t >= 10 ? (m.p >= .55 ? "good" : m.p <= .45 ? "poor" : "") : ""}" title="${m.w} vitórias, ${m.l} derrotas">${Math.round(m.p * 100)}%<span class="sub">${m.w}-${m.l}</span></td>`;
+  const minG = +$("minjogos").value || 0;
+  const maxCap = Math.max(...dv.vagas.map((v) => v.mmr_max));
+
+  $("rows").innerHTML = rows.length ? rows.map((p) => `
+    <tr class="${p.time === DATA.meu_time ? "mine" : ""}">
+      <td class="l"><span class="pill ${p.elegivel ? "ok" : "bad"}" title="${esc(p.motivo)}">${p.elegivel ? "Elegível" : "Fora"}</span>${p.elegivel ? "" : `<span class="sub">${esc(p.motivo)}</span>`}</td>
+      <td class="l">${esc(p.time)}<span class="sub">${esc(p.clan)}</span></td>
+      <td class="l name"><a href="${esc(p.link)}" target="_blank" rel="noopener">${esc(p.jogador.replace(/#\d+$/, ""))}</a></td>
+      <td class="l race ${esc(p.raca_principal)}">${esc(p.raca_principal) || "–"}</td>
+      <td class="l">${p.elegivel ? p.vagas.map((v) => `<span class="tag" title="${esc(v.nome)} · ${esc(v.liga)}${v.obs ? " · " + esc(v.obs) : ""}">${v.mmr_max}${v.obs ? "*" : ""}</span>`).join("") : "–"}</td>
+      <td class="l">${esc(p.battletag) || "–"}</td>
+      <td class="num strong ${p.mmr_max_90d > maxCap ? "over" : ""}">${fmt(p.mmr_max_90d)}</td>
+      <td class="num">${fmt(p.mmr_atual)}</td>
+      <td class="num">${fmt(p.mmr_max_historico)}</td>
+      <td class="num strong ${(p.jogos_30d ?? 0) < minG ? "over" : ""}">${fmt(p.jogos_30d)}</td>
+      <td class="num">${fmt(p.jogos_90d)}</td>
+      <td class="num">${fmt(p.jogos_temporada)}</td>
+      <td class="num">${fmt(p.jogos_carreira)}</td>
+      ${muCell(p.mu_T)}${muCell(p.mu_P)}${muCell(p.mu_Z)}${muCell(p.mu_R)}
+    </tr>`).join("") : `<tr><td class="empty" colspan="17">Nenhum jogador com esses filtros.</td></tr>`;
+}
+
+["minjogos", "ativos", "elegiveis", "busca", "vaga"].forEach((id) => $(id).addEventListener("input", render));
+$("divisao").addEventListener("change", () => { applyDivision(); render(); });
+window.addEventListener("hashchange", () => {
+  const m = /^#divisao-(\d+)$/.exec(location.hash);
+  if (m && DATA.divisoes[m[1] - 1] && $("divisao").value !== String(m[1] - 1)) { $("divisao").value = String(m[1] - 1); applyDivision(); render(); }
+});
+$("share").addEventListener("click", async () => {
+  const url = location.href;
+  let msg = "Link copiado";
+  try { await navigator.clipboard.writeText(url); } catch { msg = url; }
+  const t = document.createElement("div"); t.className = "toast"; t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 3500);
+});
+
+
+// ---------- botão "Atualizar dados" (via Cloudflare Worker) ----------
+function setupUpdater(api, dataStamp) {
+  const btn = $("refresh"), form = $("upd"), msg = $("updmsg"), go = $("updgo");
+  btn.hidden = false;
+  const saved = store.get("codigo");
+  if (saved) $("codigo").value = saved;
+  btn.addEventListener("click", () => {
+    form.hidden = !form.hidden;
+    btn.setAttribute("aria-expanded", String(!form.hidden));
+    if (!form.hidden) $("codigo").focus();
+  });
+  const say = (t, err) => { msg.textContent = t; msg.classList.toggle("err", !!err); };
+  let timer = null;
+
+  async function waitForData(startedAt) {
+    clearTimeout(timer);
+    const elapsed = Math.round((Date.now() - startedAt) / 60000);
+    if (elapsed > 30) { go.disabled = false; return say("A atualização está demorando mais que o normal. Recarregue a página daqui a pouco.", true); }
+    try {
+      const st = await fetch(api + "/status").then((r) => r.json());
+      const run = st.ultima;
+      if (run && run.status === "completed" && run.conclusion !== "success") {
+        go.disabled = false;
+        return say("A atualização falhou no GitHub. Tente de novo em alguns minutos.", true);
+      }
+      if (run && run.status === "completed") {
+        const fresh = await fetch("data/latest.json?t=" + Date.now(), { cache: "no-store" }).then((r) => r.json());
+        if (fresh.atualizado_em !== dataStamp) {
+          say("Dados atualizados. Recarregando…");
+          setTimeout(() => location.reload(), 1200);
+          return;
+        }
+        say(`Coleta concluída, publicando a página… (${elapsed} min)`);
+      } else {
+        say(`Coletando dados do SC2 Pulse… (${elapsed} min). Leva uns 5 minutos, ou 10 com matchups. Pode deixar a página aberta.`);
+      }
+    } catch { say(`Aguardando resposta… (${elapsed} min)`); }
+    timer = setTimeout(() => waitForData(startedAt), 15000);
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const codigo = $("codigo").value.trim();
+    go.disabled = true;
+    say("Pedindo atualização…");
+    try {
+      const r = await fetch(api + "/atualizar", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ codigo, matchups: $("updmu").checked }),
+      });
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok) { go.disabled = false; return say(body.erro || `Erro ${r.status}.`, true); }
+      store.set("codigo", codigo);
+      if (body.ja_rodando) say("Já tem uma atualização em andamento. Vou avisar quando terminar.");
+      waitForData(body.ja_rodando && body.ultima ? new Date(body.ultima.criado_em).getTime() : Date.now());
+    } catch {
+      go.disabled = false;
+      say("Não consegui falar com o serviço de atualização. Verifique sua conexão.", true);
+    }
+  });
+}
+
+fetch("data/latest.json", { cache: "no-store" })
+  .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(init)
+  .catch((e) => {
+    $("stamp").textContent = "Não foi possível carregar os dados.";
+    $("rows").innerHTML = `<tr><td class="empty" colspan="17">Os dados ainda não foram coletados (${esc(e.message)}). Rode o coletor ou aguarde a próxima atualização automática.</td></tr>`;
+  });
+</script>
+</body>
+</html>
