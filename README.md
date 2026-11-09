@@ -75,7 +75,7 @@ bash preparar-vps.sh pedreirodedados.com.br "COLE AQUI O CONTEÚDO DE sc2-deploy
 
 Sem domínio ainda, troque o domínio por `""`. O script instala tudo, configura o firewall, roda a primeira coleta (de 5 a 10 minutos) e, no fim, mostra o **código de atualização** que você vai passar para os capitães.
 
-Para mudar o código depois, edite `/etc/sc2-monitor.env` e rode `systemctl restart sc2-monitor-api`. Para colocar o domínio depois, rode o script de novo com o domínio.
+Para mudar o código depois, edite `/etc/sc2-monitor.env` e rode `systemctl restart sc2-monitor-api`. Para colocar o domínio depois, rode o script de novo com o domínio. O endereço com `www` redireciona sozinho para o endereço sem `www`.
 
 ### 5. Ligar o deploy automático
 
