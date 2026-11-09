@@ -18,6 +18,7 @@ REGION_ID = 1
 QUEUE_1V1 = 201
 RACES = {1: "Terran", 2: "Protoss", 3: "Zerg", 4: "Random"}
 RACE_LETTER = {"Terran": "T", "Protoss": "P", "Zerg": "Z", "Random": "R"}
+RACE_ID = {name.upper(): rid for rid, name in RACES.items()}
 
 
 class RateLimiter:
@@ -79,6 +80,16 @@ class SC2Pulse:
     def legacy_uids(realm: int, battlenet_id: int) -> list[str]:
         """Um time 1v1 por raça: queue-teamType-region-realm.bnetId.raceId."""
         return [f"{QUEUE_1V1}-0-{REGION_ID}-{realm}.{battlenet_id}.{r}" for r in RACES]
+
+    @staticmethod
+    def played_uids(member: dict) -> list[str]:
+        """Só as raças que o jogador já usou no 1v1 (raceGames é o total da carreira).
+
+        Sem raceGames, consulta as 4 raças para não perder nada."""
+        ch = member["members"]["character"]
+        uids = SC2Pulse.legacy_uids(ch["realm"], ch["battlenetId"])
+        played = {RACE_ID.get(k.upper()) for k, v in (member["members"].get("raceGames") or {}).items() if v}
+        return [u for u, r in zip(uids, RACES) if r in played] or uids
 
     def history_summary(self, uids: list[str], days: int, summaries=("GAMES", "RATING_MAX", "RATING_LAST")) -> dict:
         """Retorna {legacyUid: {GAMES, RATING_MAX, ...}} para a janela dos últimos `days` dias."""
@@ -161,21 +172,20 @@ def build_clan_report(api: SC2Pulse, clan: dict, progress=None) -> list[PlayerRo
     members = api.clan_members(clan["id"])
     if progress:
         progress(0, 3, f"{len(members)} membros encontrados")
-    all_uids = []
-    for m in members:
-        ch = m["members"]["character"]
-        all_uids += api.legacy_uids(ch["realm"], ch["battlenetId"])
+    all_uids = [u for m in members for u in api.played_uids(m)]
     s90 = api.history_summary(all_uids, 90)
     if progress:
         progress(1, 3, "histórico de 90 dias carregado")
-    s30 = api.history_summary(all_uids, 30, summaries=("GAMES",))
+    # Quem não jogou nos últimos 90 dias também não jogou nos últimos 30.
+    active = [u for u in all_uids if (s90.get(u) or {}).get("GAMES")]
+    s30 = api.history_summary(active, 30, summaries=("GAMES",))
     if progress:
         progress(2, 3, "histórico de 30 dias carregado")
     rows: list[PlayerRow] = []
     for m in members:
         ch = m["members"]["character"]
         acc = m["members"].get("account") or {}
-        uids = api.legacy_uids(ch["realm"], ch["battlenetId"])
+        uids = api.played_uids(m)
         p90 = [s90[u] for u in uids if u in s90]
         p30 = [s30[u] for u in uids if u in s30]
         race_games = m["members"].get("raceGames") or {}

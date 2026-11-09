@@ -87,7 +87,7 @@ A partir daí, cada push no `main` roda os testes e atualiza a VPS sozinho. Dá 
 
 ## Usar no dia a dia
 
-- **Atualizar os dados:** na página, clique em **Atualizar dados**, digite o código e clique em **Atualizar agora**. A página recarrega sozinha quando terminar (uns 5 minutos, ou 10 com matchups).
+- **Atualizar os dados:** na página, clique em **Atualizar dados**, digite o código e clique em **Atualizar agora**. A página recarrega sozinha quando terminar (uns 2 minutos, ou uns 8 com matchups).
 - **Mudar times, clãs ou limites:** edite o `config.json` no GitHub e salve no `main`. O deploy roda sozinho, e depois é só clicar em Atualizar dados.
 - **Compartilhar:** cada divisão tem seu link (`/sc2-monitor/#divisao-1`, `#divisao-2`), e o botão "Copiar link desta divisão" copia o link certo.
 - **Achar o ID de um clã:** abra o clã no SC2 Pulse. O número em `clanId=` no endereço é o ID.
@@ -113,5 +113,5 @@ Nada vai direto no `main`: crie um branch, abra um pull request e faça o merge 
 ## Limitações
 
 - O winrate por matchup usa só as partidas que o SC2 Pulse registrou, que é parcial. Use como tendência.
-- A API do SC2 Pulse permite cerca de 4 requisições por segundo. Uma coleta dos 5 times (~830 jogadores) leva uns 4 minutos, e uns 10 recalculando matchups.
+- A API do SC2 Pulse permite cerca de 4 requisições por segundo. Uma coleta dos 5 times (~830 jogadores) leva uns 2 minutos, e uns 8 recalculando matchups.
 - A regra de off-race não é verificada automaticamente.
