@@ -60,6 +60,10 @@ systemctl enable --now sc2-monitor-api
 echo "==> Servidor web (Caddy, com HTTPS automático quando houver domínio)"
 SITE="${DOMINIO:-:80}"
 sed "s|__SITE__|$SITE|" "$APP/deploy/Caddyfile" > /etc/caddy/Caddyfile
+# Com domínio, o endereço com www redireciona para o endereço principal
+if [ -n "$DOMINIO" ] && [ "${DOMINIO#www.}" = "$DOMINIO" ]; then
+  printf '\nwww.%s {\n\tredir https://%s{uri} permanent\n}\n' "$DOMINIO" "$DOMINIO" >> /etc/caddy/Caddyfile
+fi
 systemctl reload caddy || systemctl restart caddy
 
 echo "==> Firewall: só SSH, HTTP e HTTPS"
