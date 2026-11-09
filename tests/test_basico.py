@@ -47,5 +47,18 @@ class HelpersTest(unittest.TestCase):
         self.assertEqual(format_matchup({"W": 0, "L": 0}), "-")
 
 
+class RacasJogadasTest(unittest.TestCase):
+    def membro(self, race_games):
+        return {"members": {"character": {"realm": 1, "battlenetId": 42}, "raceGames": race_games}}
+
+    def test_so_racas_jogadas(self):
+        uids = SC2Pulse.played_uids(self.membro({"ZERG": 300, "TERRAN": 2}))
+        self.assertEqual(uids, ["201-0-1-1.42.1", "201-0-1-1.42.3"])
+
+    def test_sem_racegames_consulta_todas(self):
+        self.assertEqual(len(SC2Pulse.played_uids(self.membro(None))), 4)
+        self.assertEqual(len(SC2Pulse.played_uids(self.membro({}))), 4)
+
+
 if __name__ == "__main__":
     unittest.main()
